@@ -1,0 +1,16 @@
+{
+  "name": "cas-auditor",
+  "version": "2.0.0",
+  "private": true,
+  "description": "AHS CAS Auditor - evidence day and accreditation map, single-user server-backed",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0"
+  }
+}

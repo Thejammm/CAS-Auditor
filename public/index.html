@@ -32,6 +32,11 @@
   .tabs{display:flex;align-items:stretch;margin-left:auto;}
   .tabs button{all:unset;cursor:pointer;padding:0 16px;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:var(--mut);border-bottom:3px solid transparent;}
   .tabs button.on{color:var(--accent);border-bottom-color:var(--accent);}
+  .auth{display:flex;align-items:center;gap:10px;padding:10px 0;}
+  .auth .ind{font-size:11px;color:var(--mut);white-space:nowrap;}
+  .auth .ind i{font-style:normal;display:inline-block;width:7px;height:7px;background:var(--green);margin-right:5px;vertical-align:1px;}
+  .auth .lnk{all:unset;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);padding:5px 12px;white-space:nowrap;}
+  .auth .lnk:hover{background:var(--accent-light);}
   .wrap{max-width:980px;margin:0 auto;padding:24px 20px 70px;}
 
   /* ── controls row ──────────────────────────────── */
@@ -174,6 +179,7 @@
     <button id="tabMap" onclick="setTab('map')">Accreditation map</button>
     <button id="tabAdm" onclick="setTab('adm')">Admin</button>
   </div>
+  <div class="auth" id="authArea" style="margin-left:14px;"></div>
 </div>
 
 <div class="wrap">
@@ -269,6 +275,19 @@
       <div class="f"><label>Constructionline Gold renewal (optional)</label><input type="month" id="ncClg"></div>
     </div>
     <div class="da"><button class="btn" onclick="saveClient()">Add client</button><button class="btn q" onclick="closeClientBox()">Cancel</button></div>
+  </div>
+</div>
+
+<!-- sign-in dialog -->
+<div class="ovl" id="signInOvl" style="display:none;">
+  <div class="dlg">
+    <div class="dh">Sign in</div>
+    <div class="db">
+      <div class="f"><label>Email</label><input type="text" id="siEmail" autocomplete="username"></div>
+      <div class="f"><label>Password</label><input type="password" id="siPass" autocomplete="current-password"></div>
+      <p style="font-size:11px;color:var(--faint);margin:0;">Signed in, everything saves to the server as well as this browser. Signed out, the app keeps working locally.</p>
+    </div>
+    <div class="da"><button class="btn" onclick="doSignIn()">Sign in</button><button class="btn q" onclick="closeSignIn()">Cancel</button></div>
   </div>
 </div>
 
@@ -721,7 +740,53 @@ var SEED = [
 
 var S = { sel:null, clients:[] };
 try{ var raw = localStorage.getItem(LS_KEY); if(raw) S = JSON.parse(raw); }catch(e){}
-function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+
+/* ── dual mode: localStorage always; signed in, saves also land on the
+     server (debounced). Opened as a file, or signed out, nothing changes. */
+var TOKEN_KEY='casaudit_token';
+var srv={ on:/^https?:$/.test(location.protocol), token:null, last:'', pushT:null };
+try{ srv.token=localStorage.getItem(TOKEN_KEY)||null; }catch(e){}
+function api(path,opts){ opts=opts||{}; opts.headers=Object.assign({'Content-Type':'application/json'},opts.headers||{});
+  if(srv.token) opts.headers.Authorization='Bearer '+srv.token;
+  return fetch(path,opts).then(function(r){
+    if(r.status===401&&srv.token){ srv.token=null; try{localStorage.removeItem(TOKEN_KEY);}catch(e){} renderAuth(); }
+    return r; }); }
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
+  if(srv.on&&srv.token){ clearTimeout(srv.pushT); srv.pushT=setTimeout(pushState,600); } }
+function pushState(){ if(!srv.on||!srv.token) return;
+  api('/api/state',{ method:'PUT', body:JSON.stringify({ state:S }) })
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(j){ if(j&&j.ok){ srv.last=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); renderAuth(); } })
+    .catch(function(){}); }
+function pullState(){ if(!srv.on||!srv.token) return Promise.resolve(false);
+  return api('/api/state').then(function(r){ return r.ok?r.json():null; }).then(function(j){
+    if(!j||!j.ok) return false;
+    var remote=j.state&&Array.isArray(j.state.clients)?j.state:null;
+    if(remote&&remote.clients.length){ S=remote; save(); }
+    else if(S.clients.length){ pushState(); }   // first sign-in: carry this browser's data up
+    srv.last=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    return true; }).catch(function(){ return false; }); }
+function renderAuth(){ var el=document.getElementById('authArea'); if(!el) return;
+  if(!srv.on){ el.innerHTML=''; return; }
+  el.innerHTML = srv.token
+    ? '<span class="ind"><i></i>Synced'+(srv.last?' · '+srv.last:'')+'</span><button class="lnk" onclick="signOut()">Sign out</button>'
+    : '<button class="lnk" onclick="openSignIn()">Sign in</button>'; }
+function openSignIn(){ document.getElementById('siEmail').value='simon@archerhs.co.uk';
+  document.getElementById('siPass').value='';
+  document.getElementById('signInOvl').style.display='flex'; document.getElementById('siPass').focus(); }
+function closeSignIn(){ document.getElementById('signInOvl').style.display='none'; }
+function doSignIn(){
+  api('/api/auth/login',{ method:'POST', body:JSON.stringify({
+    email:document.getElementById('siEmail').value, password:document.getElementById('siPass').value }) })
+  .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+  .then(function(x){
+    if(!x.ok||!x.j.token){ toast(x.j&&x.j.error==='bad_credentials'?'Wrong email or password.':'Sign-in unavailable.'); return; }
+    srv.token=x.j.token; try{ localStorage.setItem(TOKEN_KEY,srv.token); }catch(e){}
+    closeSignIn(); renderAuth();
+    pullState().then(function(){ render(); renderAdmin(); toast('Signed in - synced.'); });
+  }).catch(function(){ toast('Sign-in unavailable.'); }); }
+function signOut(){ srv.token=null; try{ localStorage.removeItem(TOKEN_KEY); }catch(e){}
+  renderAuth(); toast('Signed out - this browser keeps working locally.'); }
 function uid(){ return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function cur(){ for(var i=0;i<S.clients.length;i++) if(S.clients[i].id===S.sel) return S.clients[i]; return null; }
@@ -927,7 +992,7 @@ function renderAdmin(){
   var h='<table class="adm"><tr><th>Client</th><th>CHAS renewal</th><th>CLG renewal</th><th>Lines</th><th>Owed</th><th></th></tr>';
   S.clients.forEach(function(c){
     var owed=c.lines.filter(function(l){ return l.status==='a'; }).length;
-    h+='<tr><td><b>'+esc(c.name)+'</b></td><td>'+(fmtM(c.chas)||'-')+'</td><td>'+(fmtM(c.clg)||'-')+'</td>'
+    h+='<tr><td><b>'+esc(c.name)+'</b><span style="display:block;font-size:10.5px;color:var(--faint);font-family:ui-monospace,\'SFMono-Regular\',Menlo,monospace;">Link ID '+esc(c.id)+' <button class="abtn" style="margin-left:4px;padding:0 6px;" title="Copy for the Compass link settings" onclick="copyLinkId(\''+c.id+'\')">Copy</button></span></td><td>'+(fmtM(c.chas)||'-')+'</td><td>'+(fmtM(c.clg)||'-')+'</td>'
       +'<td>'+c.lines.length+'</td><td>'+(owed||'-')+'</td>'
       +'<td class="acts"><button class="abtn" onclick="openFromAdmin(\''+c.id+'\')">Open</button>'
       +'<button class="abtn" onclick="renameClient(\''+c.id+'\')">Rename</button>'
@@ -937,6 +1002,8 @@ function renderAdmin(){
   el.innerHTML=h;
 }
 function openFromAdmin(id){ S.sel=id; save(); setTab('ev'); render(); }
+function copyLinkId(id){ try{ navigator.clipboard.writeText(id); toast('Link ID copied.'); }
+  catch(e){ prompt('Link ID for the Compass link settings:', id); } }
 function renameClient(id){ var c=null; S.clients.forEach(function(x){ if(x.id===id)c=x; }); if(!c) return;
   var v=prompt('New name for '+c.name+':', c.name);
   if(v&&v.trim()){ c.name=v.trim(); save(); renderAdmin(); render(); } }
@@ -1011,13 +1078,17 @@ function guardOverlay(id, closeFn){ var ov=document.getElementById(id); var arme
   ov.addEventListener('mouseup',function(e){ if(armed&&e.target===ov) closeFn(); armed=false; }); }
 guardOverlay('clientOvl', closeClientBox);
 guardOverlay('expOvl', closeExp);
+guardOverlay('signInOvl', closeSignIn);
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape') return;
   if(document.getElementById('expOvl').style.display!=='none') closeExp();
+  else if(document.getElementById('signInOvl').style.display!=='none') closeSignIn();
   else if(document.getElementById('clientOvl').style.display!=='none') closeClientBox(); });
 
 renderMapData();
 render();
+renderAuth();
+if(srv.on&&srv.token) pullState().then(function(ok){ if(ok){ render(); renderAdmin(); } });
 </script>
 </body>
 </html>
