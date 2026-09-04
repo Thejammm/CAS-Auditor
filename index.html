@@ -140,6 +140,14 @@
   .dlg .f input{width:100%;}
   .dlg .da{padding:0 16px 16px;display:flex;gap:10px;}
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--navy);color:#fff;font-size:12.5px;padding:9px 18px;z-index:60;display:none;}
+
+  /* ── PDF share bar (the PD Site Tools pattern, squared) ── */
+  .pdf-ready{position:fixed;left:50%;transform:translate(-50%,120%);bottom:16px;z-index:100;background:var(--navy);color:#fff;padding:10px 12px;display:flex;gap:8px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:calc(100vw - 32px);transition:transform .2s;}
+  .pdf-ready.show{transform:translate(-50%,0);}
+  .pdf-ready span{font-size:12.5px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pdf-ready button{font:inherit;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 14px;border:1px solid #4b5563;background:#374151;color:#fff;cursor:pointer;}
+  .pdf-ready button.primary{background:var(--accent);border-color:var(--accent);}
+  .pdf-ready button.ghost{background:none;border:none;padding:6px;font-size:13px;}
 </style>
 </head>
 <body>
@@ -840,8 +848,34 @@ function buildPdfDoc(){ var r=requestReady(); if(!r) return null;
   return doc;
 }
 function downloadPdf(){ var doc=buildPdfDoc(); if(!doc) return;
-  var c=cur(); doc.save(safeName(c.name)+' - evidence needed.pdf');
-  toast('PDF downloaded.'); }
+  var c=cur(); deliverPdf(doc, safeName(c.name)+' - evidence needed.pdf'); }
+
+/* ── PDF delivery (the PD Site Tools share bar) ──
+   Where the Web Share API can hand a file straight to Mail, WhatsApp or
+   Teams, the bar offers Share / Download; anywhere else it just downloads. */
+var _pendingPdf=null;
+function deliverPdf(doc,filename){
+  var file=null,canShare=false;
+  try{ file=new File([doc.output('blob')],filename,{type:'application/pdf'});
+    canShare=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]}));
+  }catch(e){ canShare=false; }
+  if(!canShare){ doc.save(filename); toast('PDF downloaded.'); return; }
+  _pendingPdf={file:file,filename:filename,doc:doc};
+  var bar=document.getElementById('pdfReadyBar');
+  if(!bar){ bar=document.createElement('div'); bar.id='pdfReadyBar'; bar.className='pdf-ready';
+    bar.innerHTML='<span id="pdfReadyName"></span>'
+      +'<button type="button" class="primary" onclick="sharePendingPdf()">Share</button>'
+      +'<button type="button" onclick="downloadPendingPdf()">Download</button>'
+      +'<button type="button" class="ghost" onclick="closePdfBar()" aria-label="Close">✕</button>';
+    document.body.appendChild(bar); }
+  document.getElementById('pdfReadyName').textContent=filename;
+  bar.classList.add('show');
+}
+function sharePendingPdf(){ if(!_pendingPdf) return;
+  navigator.share({files:[_pendingPdf.file],title:_pendingPdf.filename}).then(closePdfBar)
+    .catch(function(err){ if(err&&err.name!=='AbortError'){ toast('Share not available, downloading instead.'); downloadPendingPdf(); } }); }
+function downloadPendingPdf(){ if(_pendingPdf) _pendingPdf.doc.save(_pendingPdf.filename); closePdfBar(); }
+function closePdfBar(){ var bar=document.getElementById('pdfReadyBar'); if(bar) bar.classList.remove('show'); _pendingPdf=null; }
 
 function emailList(){ var r=requestReady(); if(!r) return;
   var c=r.c, owed=r.owed, nl='\r\n';
