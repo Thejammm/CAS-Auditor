@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CAS Auditor</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Ccircle cx='21' cy='20' r='16.5' stroke='%232563EB' stroke-width='2.3'/%3E%3Ccircle cx='21' cy='20' r='9.5' stroke='%232563EB' stroke-width='2.3'/%3E%3Cline x1='21' y1='20' x2='40' y2='8' stroke='%238b9096' stroke-width='2.3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Ccircle cx='21' cy='20' r='16.5' stroke='%234bbfd6' stroke-width='2.3'/%3E%3Ccircle cx='21' cy='20' r='9.5' stroke='%234bbfd6' stroke-width='2.3'/%3E%3Cline x1='21' y1='20' x2='40' y2='8' stroke='%238b9096' stroke-width='2.3' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
-  /* Compass enterprise palette (brand colours mirrored from the Compass app) */
-  :root{ --navy:#1E3A5F; --accent:#2563EB; --accent-light:#EFF6FF; --accent-dark:#1D4ED8;
+  /* The AHS brand theme exactly as the live Compass app runs it:
+     teal accent #4bbfd6 (light #E4F5F9, dark #3E9DAF), primary grey #757575.
+     --navy now carries the brand dark-teal for accents formerly navy. */
+  :root{ --navy:#3E9DAF; --primary:#757575; --accent:#4bbfd6; --accent-light:#E4F5F9; --accent-dark:#3E9DAF;
     --ink:#111827; --mut:#6B7280; --faint:#9CA3AF; --line:#E5E7EB; --rule:#E5E7EB; --edge:#D1D5DB;
     --bg:#F8FAFC; --panel:#F3F4F6; --surface:#FFFFFF;
     --green:#10B981; --green-bg:#ECFDF5; --green-brd:#A7F3D0; --green-ink:#047857;
@@ -23,8 +25,10 @@
   .top .id{padding:10px 0;display:flex;align-items:center;gap:12px;}
   .top .id .mark{width:40px;height:40px;flex:0 0 auto;}
   .top .id .mark svg{width:100%;height:100%;display:block;}
-  .top .id b{font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.01em;display:block;line-height:1.25;}
-  .top .id span{font-size:12px;color:var(--mut);display:block;}
+  .top .id .wm{font-size:15px;color:var(--ink);letter-spacing:-.01em;display:block;line-height:1.25;}
+  .top .id .wm strong{font-weight:800;}
+  .top .id .wm em{font-style:italic;font-weight:600;}
+  .top .id .sub{font-size:12px;color:var(--mut);display:block;}
   .tabs{display:flex;align-items:stretch;margin-left:auto;}
   .tabs button{all:unset;cursor:pointer;padding:0 16px;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:var(--mut);border-bottom:3px solid transparent;}
   .tabs button.on{color:var(--accent);border-bottom-color:var(--accent);}
@@ -35,8 +39,8 @@
   .crow .f label{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin:0 0 3px;}
   select,input[type=text],input[type=date],input[type=month]{font:inherit;font-size:13px;border:1px solid #9aa4b2;background:#fff;padding:7px 10px;color:var(--ink);border-radius:0;}
   select:focus,input:focus{outline:2px solid var(--accent);outline-offset:-1px;}
-  /* Primary buttons exactly as Compass: accent fill, navy text, white on hover */
-  .btn{border:1px solid var(--accent);background:var(--accent);color:var(--navy);padding:9px 18px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;}
+  /* Primary buttons exactly as the live Compass theme: teal fill, grey text, white on hover */
+  .btn{border:1px solid var(--accent);background:var(--accent);color:var(--primary);padding:9px 18px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;}
   .btn:hover{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
   .btn.o{background:#fff;border:1px solid var(--accent);color:var(--accent);padding:8px 17px;}
   .btn.o:hover{background:var(--accent-light);}
@@ -47,7 +51,7 @@
   .scr{border:1px solid var(--edge);background:#fff;}
   /* Card headers the Compass way: white surface, dark title - no navy slabs */
   .bar{background:var(--surface);color:var(--ink);border-bottom:1px solid var(--line);padding:11px 18px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;}
-  .bar b{font-size:13px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;color:var(--navy);}
+  .bar b{font-size:13px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;color:var(--ink);}
   .bar span{font-size:12px;color:var(--mut);}
   .li{display:flex;align-items:center;gap:14px;padding:9px 18px;border-bottom:1px solid var(--line);}
   .li .no{flex:0 0 22px;font-family:ui-monospace,'SFMono-Regular',Menlo,monospace;font-size:11.5px;color:#9aa4b2;}
@@ -141,16 +145,16 @@
   /* ── modal / toast ─────────────────────────────── */
   .ovl{position:fixed;inset:0;background:#1a233266;display:flex;align-items:center;justify-content:center;z-index:50;}
   .dlg{background:#fff;border:1px solid var(--edge);width:min(430px,92vw);}
-  .dlg .dh{background:var(--surface);color:var(--navy);border-bottom:1px solid var(--line);padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;}
+  .dlg .dh{background:var(--surface);color:var(--ink);border-bottom:1px solid var(--line);padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;}
   .dlg .db{padding:16px;}
   .dlg .f{margin:0 0 12px;}
   .dlg .f label{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin:0 0 3px;}
   .dlg .f input{width:100%;}
   .dlg .da{padding:0 16px 16px;display:flex;gap:10px;}
-  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--navy);color:#fff;font-size:12.5px;padding:9px 18px;z-index:60;display:none;}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--primary);color:#fff;font-size:12.5px;padding:9px 18px;z-index:60;display:none;}
 
   /* ── PDF share bar (the PD Site Tools pattern, squared) ── */
-  .pdf-ready{position:fixed;left:50%;transform:translate(-50%,120%);bottom:16px;z-index:100;background:var(--navy);color:#fff;padding:10px 12px;display:flex;gap:8px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:calc(100vw - 32px);transition:transform .2s;}
+  .pdf-ready{position:fixed;left:50%;transform:translate(-50%,120%);bottom:16px;z-index:100;background:#1f2937;color:#fff;padding:10px 12px;display:flex;gap:8px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:calc(100vw - 32px);transition:transform .2s;}
   .pdf-ready.show{transform:translate(-50%,0);}
   .pdf-ready span{font-size:12.5px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pdf-ready button{font:inherit;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 14px;border:1px solid #4b5563;background:#374151;color:#fff;cursor:pointer;}
@@ -163,7 +167,7 @@
 <div class="top">
   <div class="id">
     <span class="mark"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="21" cy="20" r="16.5" stroke="var(--accent)" stroke-width="2.3"/><circle cx="21" cy="20" r="9.5" stroke="var(--accent)" stroke-width="2.3"/><line x1="21" y1="20" x2="40" y2="8" stroke="#8b9096" stroke-width="2.3" stroke-linecap="round"/></svg></span>
-    <span><b>CAS Auditor</b><span>Archer Health and Safety</span></span>
+    <span><span class="wm"><strong>CAS</strong> <em>Auditor</em></span><span class="sub">Archer Health and Safety</span></span>
   </div>
   <div class="tabs">
     <button id="tabEv" class="on" onclick="setTab('ev')">Evidence day</button>
@@ -837,11 +841,11 @@ function buildPdfDoc(){ var r=requestReady(); if(!r) return null;
   var c=r.c, owed=r.owed;
   var JS=window.jspdf; var doc=new JS.jsPDF({ unit:'mm', format:'a4' });
   var W=210, M=18, y=20;
-  doc.setTextColor(30,58,95); doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.setTextColor(62,157,175); doc.setFont('helvetica','bold'); doc.setFontSize(16);
   doc.text('Archer Health and Safety', M, y);
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(91,100,114);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(117,117,117);
   doc.text('Evidence request · '+fmtD(today()), W-M, y, { align:'right' });
-  y+=4; doc.setDrawColor(30,58,95); doc.setLineWidth(0.8); doc.line(M, y, W-M, y); y+=11;
+  y+=4; doc.setDrawColor(75,191,214); doc.setLineWidth(0.8); doc.line(M, y, W-M, y); y+=11;
   doc.setTextColor(26,35,50); doc.setFont('helvetica','bold'); doc.setFontSize(13);
   doc.text(c.name+' - evidence needed', M, y); y+=8;
   doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
