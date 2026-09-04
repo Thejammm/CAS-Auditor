@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CAS Auditor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231e3a5f'/%3E%3Ctext x='16' y='21' font-family='Arial' font-size='13' font-weight='700' fill='%23fff' text-anchor='middle'%3ECA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+  :root{ --navy:#1e3a5f; --ink:#1a2332; --mut:#5b6472; --faint:#8a93a1; --line:#e3e7ec; --rule:#d5dbe3; --edge:#b9c0cb; --bg:#eef0f3; --panel:#f4f6f8; --green:#1f6f43; --amber:#9a5b00; --red:#8c1d1d; }
+  *{box-sizing:border-box;}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:var(--bg);color:var(--ink);line-height:1.5;}
+  button{font:inherit;}
+
+  /* ── frame ─────────────────────────────────────── */
+  .top{background:var(--navy);color:#fff;padding:0 22px;display:flex;align-items:stretch;gap:26px;flex-wrap:wrap;}
+  .top .id{padding:14px 0;}
+  .top .id b{font-size:15px;letter-spacing:.05em;text-transform:uppercase;font-weight:800;display:block;line-height:1.2;}
+  .top .id span{font-size:11px;opacity:.75;}
+  .tabs{display:flex;align-items:stretch;margin-left:auto;}
+  .tabs button{all:unset;cursor:pointer;padding:0 18px;display:flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#ffffffb3;border-bottom:3px solid transparent;}
+  .tabs button.on{color:#fff;border-bottom-color:#fff;}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 20px 70px;}
+
+  /* ── controls row ──────────────────────────────── */
+  .crow{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin:0 0 18px;}
+  .crow .f label{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin:0 0 3px;}
+  select,input[type=text],input[type=date],input[type=month]{font:inherit;font-size:13px;border:1px solid #9aa4b2;background:#fff;padding:7px 10px;color:var(--ink);border-radius:0;}
+  select:focus,input:focus{outline:2px solid var(--navy);outline-offset:-1px;}
+  .btn{border:0;background:var(--navy);color:#fff;padding:9px 18px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;}
+  .btn.o{background:#fff;border:1px solid var(--navy);color:var(--navy);padding:8px 17px;}
+  .btn.q{background:#fff;border:1px solid #9aa4b2;color:var(--mut);padding:8px 17px;}
+
+  /* ── the list ──────────────────────────────────── */
+  .scr{border:1px solid var(--edge);background:#fff;}
+  .bar{background:var(--navy);color:#fff;padding:11px 18px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;}
+  .bar b{font-size:13px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;}
+  .bar span{font-size:12px;opacity:.8;}
+  .path{background:var(--panel);border-bottom:1px solid var(--rule);padding:7px 18px;font-size:12px;color:#3d4756;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .path code{font-family:ui-monospace,'SFMono-Regular',Menlo,monospace;font-size:11.5px;background:#e7eaef;padding:1px 6px;}
+  .path .lnk{all:unset;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--navy);border-bottom:1px solid var(--navy);}
+  .li{display:flex;align-items:center;gap:14px;padding:9px 18px;border-bottom:1px solid var(--line);}
+  .li.over{background:#e9eef5;box-shadow:inset 0 0 0 1px var(--navy);}
+  .li .no{flex:0 0 22px;font-family:ui-monospace,'SFMono-Regular',Menlo,monospace;font-size:11.5px;color:#9aa4b2;}
+  .li .nm{flex:1;min-width:0;}
+  .li .nm b{font-size:13px;font-weight:600;display:block;}
+  .li .nm span{font-size:11.5px;color:var(--faint);}
+  .li .nm .got{font-size:11px;color:var(--green);font-weight:600;}
+  .li .nm input.note{display:block;width:100%;max-width:420px;border:1px solid #c6ccd6;padding:3px 8px;font-size:11.5px;margin-top:4px;color:#3d4756;}
+  .li .rm{all:unset;cursor:pointer;color:#9aa4b2;font-size:14px;padding:0 4px;}
+  .li .rm:hover{color:var(--red);}
+  .att{all:unset;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--navy);border:1px solid var(--navy);padding:4px 10px;white-space:nowrap;}
+  .st{display:flex;flex:0 0 auto;}
+  .st button{all:unset;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:5px 12px;border:1px solid #9aa4b2;border-left-width:0;color:var(--faint);background:#fff;white-space:nowrap;}
+  .st button:first-child{border-left-width:1px;}
+  .st button.on-g{background:var(--green);border-color:var(--green);color:#fff;}
+  .st button.on-a{background:var(--amber);border-color:var(--amber);color:#fff;}
+  .st button.on-n{background:var(--mut);border-color:var(--mut);color:#fff;}
+  .addrow{display:flex;align-items:center;gap:10px;padding:11px 18px;background:var(--panel);border-top:1px solid var(--rule);flex-wrap:wrap;}
+  .addrow input{flex:1;min-width:160px;}
+  .addrow input.b{flex:0 1 240px;}
+  .foot{background:var(--panel);border-top:1px solid var(--rule);padding:12px 18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .foot .dl{font-size:12.5px;color:#3d4756;display:flex;align-items:center;gap:8px;}
+  .tally{margin-left:auto;font-size:12px;color:#3d4756;}
+  .empty{padding:40px 20px;text-align:center;color:var(--mut);font-size:13.5px;}
+  .hintline{font-size:11.5px;color:var(--faint);margin:10px 2px 0;}
+
+  /* ── map tab ───────────────────────────────────── */
+  .intro{padding:10px 18px;border-bottom:1px solid var(--rule);font-size:12px;color:#3d4756;background:var(--panel);}
+  .mapwrap{overflow-x:auto;}
+  table.map{border-collapse:collapse;width:100%;font-size:12.5px;min-width:760px;}
+  .map th{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);text-align:center;padding:9px 8px;border-bottom:1px solid var(--edge);}
+  .map th.l{text-align:left;padding-left:18px;}
+  .map td{padding:8px;border-bottom:1px solid var(--line);text-align:center;}
+  .map td.l{text-align:left;padding-left:18px;}
+  .map td.l b{font-weight:600;display:block;}
+  .map td.l span{font-size:11px;color:var(--faint);font-family:ui-monospace,'SFMono-Regular',Menlo,monospace;}
+  .c{display:inline-block;width:14px;height:14px;border:1px solid #9aa4b2;vertical-align:middle;}
+  .c.full{background:var(--navy);border-color:var(--navy);}
+  .c.cond{background:linear-gradient(135deg,var(--navy) 50%,#fff 50%);}
+  .map .why{display:block;font-size:10px;color:var(--faint);margin-top:2px;}
+  .keys{padding:10px 18px;border-top:1px solid var(--rule);background:var(--panel);font-size:11.5px;color:#3d4756;display:flex;gap:22px;flex-wrap:wrap;}
+  .keys .c{width:11px;height:11px;margin-right:5px;}
+  .badges{border-top:1px solid var(--edge);}
+  .badges .b{display:flex;gap:14px;padding:9px 18px;border-bottom:1px solid var(--line);font-size:12.5px;align-items:baseline;}
+  .badges .b:last-child{border-bottom:0;}
+  .badges .b b{flex:0 0 190px;font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--navy);}
+  .badges .b span{color:#3d4756;}
+  .vfy{color:var(--amber);font-weight:600;}
+  .gates{margin-top:18px;border:1px solid var(--edge);background:#fff;}
+  .gates .gh{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);padding:9px 18px;border-bottom:1px solid var(--edge);}
+  .gates .g{display:flex;gap:14px;padding:7px 18px;border-bottom:1px solid var(--line);font-size:12px;}
+  .gates .g:last-child{border-bottom:0;}
+  .gates .g b{flex:0 0 46px;font-family:ui-monospace,'SFMono-Regular',Menlo,monospace;font-size:11.5px;color:var(--navy);font-weight:700;}
+  .gates .g span{color:#3d4756;}
+
+  /* ── modal ─────────────────────────────────────── */
+  .ovl{position:fixed;inset:0;background:#1a233266;display:flex;align-items:center;justify-content:center;z-index:50;}
+  .dlg{background:#fff;border:1px solid var(--edge);width:min(430px,92vw);}
+  .dlg .dh{background:var(--navy);color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;}
+  .dlg .db{padding:16px;}
+  .dlg .f{margin:0 0 12px;}
+  .dlg .f label{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin:0 0 3px;}
+  .dlg .f input{width:100%;}
+  .dlg .da{padding:0 16px 16px;display:flex;gap:10px;}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--navy);color:#fff;font-size:12.5px;padding:9px 18px;z-index:60;display:none;}
+
+  /* ── handout (print) ───────────────────────────── */
+  #sheet{display:none;}
+  @media print{
+    body>*{display:none !important;}
+    #sheet{display:block !important;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a2332;padding:10mm 6mm;}
+    #sheet .lh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #1e3a5f;padding-bottom:8px;margin-bottom:16px;}
+    #sheet .lh b{color:#1e3a5f;font-size:16px;font-weight:800;}
+    #sheet .lh span{font-size:11px;color:#5b6472;}
+    #sheet h3{font-size:15px;margin:0 0 3px;font-weight:700;}
+    #sheet .dead{font-size:13px;margin:0 0 14px;}
+    #sheet .dead b{color:#8c1d1d;}
+    #sheet ol{margin:0 0 16px;padding-left:20px;font-size:13px;}
+    #sheet ol li{margin:0 0 8px;font-weight:600;}
+    #sheet ol li span{color:#5b6472;font-size:11.5px;display:block;font-weight:400;}
+    #sheet .sig{font-size:11.5px;color:#5b6472;border-top:1px solid #d5dbe3;padding-top:10px;margin-top:22px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="id"><b>CAS Auditor</b><span>Archer Health and Safety</span></div>
+  <div class="tabs">
+    <button id="tabEv" class="on" onclick="setTab('ev')">Evidence day</button>
+    <button id="tabMap" onclick="setTab('map')">Accreditation map</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ══ EVIDENCE DAY ══ -->
+  <div id="pgEv">
+    <div class="crow">
+      <div class="f"><label>Client</label><select id="selClient" onchange="pickClient(this.value)"></select></div>
+      <button class="btn o" onclick="openClientBox()">Add client</button>
+      <span style="flex:1"></span>
+      <div class="f"><label>CHAS renewal</label><input type="month" id="inChas" onchange="setRen('chas',this.value)"></div>
+      <div class="f"><label>CLG renewal</label><input type="month" id="inClg" onchange="setRen('clg',this.value)"></div>
+    </div>
+    <div id="evBody"></div>
+    <p class="hintline" id="fsHint"></p>
+  </div>
+
+  <!-- ══ ACCREDITATION MAP ══ -->
+  <div id="pgMap" style="display:none;">
+    <div class="scr">
+      <div class="bar"><b>Accreditation map</b><span style="margin-left:auto;">Common Assessment Standard, Build UK, Version 5 (1 July 2025) &middot; 176 questions</span></div>
+      <div class="intro">One standard sits behind all of it. SSIP covers the Health and Safety section only; Constructionline Gold assesses the full standard; BSA HRB is the Building Safety section with four further questions that apply only to Higher-Risk Building work.</div>
+      <div class="mapwrap">
+      <table class="map">
+        <tr><th class="l" style="width:34%;">CAS section</th><th>SSIP</th><th>CAS (full)</th><th>Constructionline Gold</th><th>BSA HRB add-on</th></tr>
+        <tr><td class="l"><b>1 &middot; Identity</b><span>Q1-26</span></td><td><span class="c"></span></td><td><span class="c full"></span></td><td><span class="c full"></span></td><td><span class="c"></span></td></tr>
+        <tr><td class="l"><b>2 &middot; Financial</b><span>Q27-38</span></td><td><span class="c"></span></td><td><span class="c full"></span></td><td><span class="c full"></span></td><td><span class="c"></span></td></tr>
+        <tr><td class="l"><b>3 &middot; Corporate and Professional Standing</b><span>Q39-70</span></td><td><span class="c"></span></td><td><span class="c full"></span></td><td><span class="c full"></span></td><td><span class="c"></span></td></tr>
+        <tr><td class="l"><b>4 &middot; Health and Safety</b><span>Q71-110</span></td><td><span class="c full"></span></td><td><span class="c cond"></span><i class="why">stands down if SSIP or ISO 45001 held</i></td><td><span class="c cond"></span><i class="why">as CAS</i></td><td><span class="c"></span></td></tr>
+        <tr><td class="l"><b>5 &middot; Environmental</b><span>Q111-121</span></td><td><span class="c"></span></td><td><span class="c cond"></span><i class="why">Q112-116 stand down if ISO 14001 or EMAS held</i></td><td><span class="c cond"></span></td><td><span class="c"></span></td></tr>
+        <tr><td class="l"><b>6 &middot; Quality</b><span>Q122-134</span></td><td><span class="c"></span></td><td><span class="c cond"></span><i class="why">Q125-134 stand down if ISO 9001 or BS 99001 held</i></td><td><span class="c cond"></span></td><td><span class="c"></span></td></tr>
+        <tr><td class="l"><b>7 &middot; Building Safety</b><span>Q135-154</span></td><td><span class="c"></span></td><td><span class="c cond"></span><i class="why">only if in-scope BSA work (Q22 gate)</i></td><td><span class="c cond"></span></td><td><span class="c full"></span><i class="why">plus Q151-154, HRB work only</i></td></tr>
+        <tr><td class="l"><b>8 &middot; Fairness, Inclusion and Respect</b><span>Q155-160</span></td><td><span class="c"></span></td><td><span class="c full"></span></td><td><span class="c full"></span></td><td><span class="c"></span></td></tr>
+        <tr><td class="l"><b>9 &middot; Information Security</b><span>Q161-169</span></td><td><span class="c"></span></td><td><span class="c full"></span></td><td><span class="c full"></span></td><td><span class="c"></span></td></tr>
+        <tr><td class="l"><b>10 &middot; Information Management</b><span>Q170-176</span></td><td><span class="c"></span></td><td><span class="c cond"></span><i class="why">only if structured IM required (Q24 gate)</i></td><td><span class="c cond"></span></td><td><span class="c"></span></td></tr>
+      </table>
+      </div>
+      <div class="keys">
+        <span><span class="c full"></span>Required</span>
+        <span><span class="c cond"></span>Conditional - a gate question or a held certificate changes the scope</span>
+        <span><span class="c"></span>Not part of this badge</span>
+      </div>
+      <div class="badges">
+        <div class="b"><b>SSIP</b><span>The Health and Safety section assessed on its own. Holding it stands the CAS H&amp;S questions down.</span></div>
+        <div class="b"><b>CAS (full)</b><span>The whole standard, all ten sections, gates applied.</span></div>
+        <div class="b"><b>Constructionline Gold</b><span>Assessed against the full standard. <span class="vfy">Any Gold-specific extras beyond CAS are to be verified from the Constructionline documents.</span></span></div>
+        <div class="b"><b>BSA HRB</b><span>Section 7 in full, plus questions 151-154 which apply only where Higher-Risk Building work is carried out.</span></div>
+      </div>
+    </div>
+
+    <div class="gates">
+      <div class="gh">Gate questions - what changes the scope</div>
+      <div class="g"><b>Q21</b><span>Employs sub-contractors? No: questions 38, 116, 130, 139, 160, 165 and 166 stand down.</span></div>
+      <div class="g"><b>Q22</b><span>In-scope BSA building or design work? No: all of Section 7 (Q135-154) stands down.</span></div>
+      <div class="g"><b>Q23</b><span>Higher-Risk Building work? No: Q151-154 stand down.</span></div>
+      <div class="g"><b>Q24</b><span>Projects with a structured Information Management requirement? No: Section 10 (Q170-176) stands down.</span></div>
+      <div class="g"><b>Q71</b><span>SSIP or ISO 45001 held? Yes: Q73-85 and Q86-110 stand down - H&amp;S is evidenced by the certificate.</span></div>
+      <div class="g"><b>Q89</b><span>CDM dutyholder roles held - drives which of Q90-110 apply, per role.</span></div>
+      <div class="g"><b>Q111</b><span>ISO 14001 or EMAS held? Yes: Q112-116 stand down.</span></div>
+      <div class="g"><b>Q122</b><span>BS 99001 held? Yes: Q125-134 and Section 7 stand down.</span></div>
+      <div class="g"><b>Q123</b><span>ISO 9001 held? Yes: Q125-134 stand down.</span></div>
+      <div class="g"><b>Q142</b><span>BSA dutyholder roles held - drives which of Q143-154 apply, per role.</span></div>
+    </div>
+    <p class="hintline">Scope and gate rules follow the Common Assessment Standard framework verified in Compass on 2 July 2026. Question numbers reference the standard; wording here is summary, not source text.</p>
+  </div>
+</div>
+
+<!-- add-client dialog -->
+<div class="ovl" id="clientOvl" style="display:none;">
+  <div class="dlg">
+    <div class="dh">Add client</div>
+    <div class="db">
+      <div class="f"><label>Company name</label><input type="text" id="ncName" placeholder=""></div>
+      <div class="f"><label>CHAS renewal (optional)</label><input type="month" id="ncChas"></div>
+      <div class="f"><label>Constructionline Gold renewal (optional)</label><input type="month" id="ncClg"></div>
+    </div>
+    <div class="da"><button class="btn" onclick="saveClient()">Add client</button><button class="btn q" onclick="closeClientBox()">Cancel</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="pickFiles" multiple style="display:none;">
+<div id="sheet"></div>
+
+<script>
+'use strict';
+/* CAS Auditor - Archer Health and Safety.
+   Static single-file app: clients and list state live in this browser
+   (localStorage); evidence files are written to a real folder on this PC
+   via the File System Access API. No server, no accounts. */
+
+var LS_KEY = 'casaudit_v1';
+var SEED = [
+  ['Toolbox talk records','signed records for the year to date'],
+  ['RAMS - live projects','current versions for each live job'],
+  ['COSHH assessments','current set with review dates'],
+  ['Training matrix','latest version'],
+  ['Training certificates and cards','certificates for everyone on the matrix'],
+  ['LOLER thorough examination reports','all lifting equipment, in date'],
+  ['PUWER inspection records','work equipment checks'],
+  ['Other statutory checks','fixed wiring, gas, LEV, PAT - as applicable'],
+  ['CDM duty-holder correspondence','appointments, notifications, PD and PC exchanges'],
+  ['Building Regs / BSA supply-chain correspondence','competence checks and declarations'],
+  ['Insurance certificates',"employers' and public liability, current"],
+  ['H&S policy','signed and dated review within 12 months'],
+  ['Accident record and RIDDOR reports','12-month summary'],
+  ['Health surveillance records','where noise, vibration or COSHH exposure applies'],
+  ['Environmental records','waste carrier registration and transfer notes']
+];
+
+var S = { sel:null, clients:[] };
+try{ var raw = localStorage.getItem(LS_KEY); if(raw) S = JSON.parse(raw); }catch(e){}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+function uid(){ return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function cur(){ for(var i=0;i<S.clients.length;i++) if(S.clients[i].id===S.sel) return S.clients[i]; return null; }
+function newLines(){ return SEED.map(function(p,i){ return { id:'L'+i, name:p[0], hint:p[1], status:'', note:'', files:0, last:'', custom:false }; }); }
+function fmtD(iso){ if(!iso) return ''; var d=new Date(iso+'T12:00:00'); if(isNaN(d)) return iso;
+  return d.getDate()+' '+['January','February','March','April','May','June','July','August','September','October','November','December'][d.getMonth()]+' '+d.getFullYear(); }
+function fmtM(ym){ if(!ym) return ''; var p=ym.split('-'); if(p.length<2) return ym;
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1]+' '+p[0]; }
+function today(){ return new Date().toISOString().slice(0,10); }
+
+var toastT = null;
+function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.style.display='block';
+  clearTimeout(toastT); toastT=setTimeout(function(){ t.style.display='none'; }, 2600); }
+
+/* ── folder handles (IndexedDB - handles cannot go in localStorage) ── */
+var FS_OK = ('showDirectoryPicker' in window);
+var dirHandle = null;   // for the selected client, once connected this session
+function idb(){ return new Promise(function(res,rej){ var r=indexedDB.open('casaudit',1);
+  r.onupgradeneeded=function(){ r.result.createObjectStore('handles'); };
+  r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; }); }
+function idbSet(k,v){ return idb().then(function(db){ return new Promise(function(res,rej){
+  var tx=db.transaction('handles','readwrite'); tx.objectStore('handles').put(v,k);
+  tx.oncomplete=res; tx.onerror=function(){ rej(tx.error); }; }); }); }
+function idbGet(k){ return idb().then(function(db){ return new Promise(function(res,rej){
+  var tx=db.transaction('handles','readonly'); var q=tx.objectStore('handles').get(k);
+  q.onsuccess=function(){ res(q.result||null); }; q.onerror=function(){ rej(q.error); }; }); }); }
+
+function connectFolder(){ var c=cur(); if(!c) return;
+  if(!FS_OK){ toast('This browser cannot write folders - use Chrome or Edge on the laptop.'); return; }
+  window.showDirectoryPicker({ mode:'readwrite' }).then(function(h){
+    dirHandle=h; c.folderName=h.name; save(); idbSet(c.id,h).catch(function(){});
+    render(); toast('Folder connected: '+h.name);
+  }).catch(function(){});
+}
+function reconnectFolder(){ var c=cur(); if(!c) return;
+  idbGet(c.id).then(function(h){
+    if(!h){ connectFolder(); return; }
+    h.requestPermission({ mode:'readwrite' }).then(function(p){
+      if(p==='granted'){ dirHandle=h; render(); toast('Folder reconnected: '+h.name); }
+      else toast('Permission not granted - pick the folder again.');
+    }).catch(function(){ connectFolder(); });
+  }).catch(function(){ connectFolder(); });
+}
+function safeName(s){ return String(s).replace(/[\\/:*?"<>|]/g,'-').replace(/\s+/g,' ').trim(); }
+function lineFolder(c,idx,line){ return (idx<9?'0':'')+(idx+1)+' '+safeName(line.name).slice(0,60); }
+function writeFiles(lineIdx, files){ var c=cur(); if(!c) return;
+  if(!dirHandle){ toast('Connect the evidence folder first.'); return; }
+  var line=c.lines[lineIdx]; var sub=lineFolder(c,lineIdx,line);
+  dirHandle.getDirectoryHandle(sub,{create:true}).then(function(dh){
+    var jobs=[]; Array.prototype.forEach.call(files,function(f){
+      var name=today()+' '+safeName(f.name);
+      jobs.push(dh.getFileHandle(name,{create:true}).then(function(fh){ return fh.createWritable(); })
+        .then(function(w){ return w.write(f).then(function(){ return w.close(); }); }));
+    });
+    return Promise.all(jobs).then(function(){
+      line.files+=files.length; line.last=today(); line.status='g'; save(); render();
+      toast(files.length+(files.length===1?' file filed to ':' files filed to ')+sub);
+    });
+  }).catch(function(){ toast('Could not write to the folder - reconnect it and try again.'); });
+}
+
+/* ── rendering ────────────────────────────────────── */
+function setTab(t){ document.getElementById('pgEv').style.display = t==='ev'?'':'none';
+  document.getElementById('pgMap').style.display = t==='map'?'':'none';
+  document.getElementById('tabEv').className = t==='ev'?'on':'';
+  document.getElementById('tabMap').className = t==='map'?'on':''; }
+
+function render(){
+  var selEl=document.getElementById('selClient'); var opts='';
+  if(!S.clients.length) opts='<option value="">No clients yet</option>';
+  S.clients.forEach(function(c){ opts+='<option value="'+c.id+'"'+(c.id===S.sel?' selected':'')+'>'+esc(c.name)+'</option>'; });
+  selEl.innerHTML=opts;
+  var c=cur();
+  document.getElementById('inChas').value = c?(c.chas||''):'';
+  document.getElementById('inClg').value = c?(c.clg||''):'';
+  document.getElementById('fsHint').textContent = FS_OK ? '' :
+    'This browser cannot write files into folders, so drop-to-file is off. Statuses, the list and the handout still work.';
+
+  var el=document.getElementById('evBody');
+  if(!c){ el.innerHTML='<div class="scr"><div class="empty">Add a client to start. The fifteen standard evidence lines are created with them.</div></div>'; return; }
+
+  var g=0,a=0,n=0;
+  c.lines.forEach(function(l){ if(l.status==='g')g++; else if(l.status==='a')a++; else if(l.status==='n')n++; });
+
+  var h='<div class="scr">';
+  h+='<div class="bar"><b>'+esc(c.name)+'</b><span>Evidence day &middot; '+fmtD(today())+'</span><span style="margin-left:auto;">'
+    +(c.chas?'CHAS renewal '+fmtM(c.chas):'')+(c.chas&&c.clg?' &middot; ':'')+(c.clg?'CLG renewal '+fmtM(c.clg):'')+'</span></div>';
+  h+='<div class="path">'+(dirHandle
+      ? 'Filing to <code>'+esc(c.folderName||'folder')+'\\</code> - drop a file on a line and it lands in its subfolder, named and dated.'
+      : (c.folderName ? 'Evidence folder <code>'+esc(c.folderName)+'\\</code> is not connected in this session.' : 'No evidence folder connected yet.'))
+    +(FS_OK ? ' <button class="lnk" onclick="'+(c.folderName&&!dirHandle?'reconnectFolder()':'connectFolder()')+'">'
+      +(dirHandle?'Change folder':(c.folderName?'Reconnect folder':'Connect folder'))+'</button>' : '')+'</div>';
+
+  c.lines.forEach(function(l,i){
+    h+='<div class="li" data-i="'+i+'" ondragover="dragOver(event,this)" ondragleave="this.classList.remove(\'over\')" ondrop="dropOn(event,'+i+',this)">'
+      +'<span class="no">'+(i<9?'0':'')+(i+1)+'</span>'
+      +'<div class="nm"><b>'+esc(l.name)+'</b><span>'+esc(l.hint)+'</span>'
+      +(l.files?'<span class="got"> &nbsp;'+l.files+' file'+(l.files===1?'':'s')+' filed &middot; last '+fmtD(l.last)+'</span>':'')
+      +(l.status==='a'?'<input class="note" type="text" placeholder="Note for the handout (optional)" value="'+esc(l.note)+'" onchange="setNote('+i+',this.value)">':'')
+      +'</div>'
+      +(FS_OK?'<button class="att" onclick="pickFor('+i+')">Attach</button>':'')
+      +'<div class="st">'
+      +'<button class="'+(l.status==='g'?'on-g':'')+'" onclick="setStatus('+i+',\'g\')">In folder</button>'
+      +'<button class="'+(l.status==='a'?'on-a':'')+'" onclick="setStatus('+i+',\'a\')">Client to send</button>'
+      +'<button class="'+(l.status==='n'?'on-n':'')+'" onclick="setStatus('+i+',\'n\')">n/a</button>'
+      +'</div>'
+      +(l.custom?'<button class="rm" title="Remove this line" onclick="removeLine('+i+')">&#10005;</button>':'')
+      +'</div>';
+  });
+
+  h+='<div class="addrow"><input type="text" class="b" id="addName" placeholder="New evidence line">'
+    +'<input type="text" id="addHint" placeholder="What counts (optional)">'
+    +'<button class="btn o" onclick="addLine()">Add line</button>'
+    +'<span style="font-size:11px;color:var(--faint);">Joins this client\u2019s list and returns every visit.</span></div>';
+
+  h+='<div class="foot"><button class="btn" onclick="printHandout()">Print the client\u2019s list</button>'
+    +'<span class="dl">Deadline <input type="date" value="'+esc(c.deadline||'')+'" onchange="setDeadline(this.value)"></span>'
+    +'<span class="tally">'+g+' in the folder &middot; '+a+' owed &middot; '+n+' n/a</span></div>';
+  h+='</div>';
+  el.innerHTML=h;
+}
+
+/* ── actions ─────────────────────────────────────── */
+function pickClient(id){ S.sel=id||null; dirHandle=null; save(); render();
+  var c=cur(); if(c&&c.folderName&&FS_OK) reconnectFolder(); }
+function openClientBox(){ document.getElementById('ncName').value='';
+  document.getElementById('ncChas').value=''; document.getElementById('ncClg').value='';
+  document.getElementById('clientOvl').style.display='flex'; document.getElementById('ncName').focus(); }
+function closeClientBox(){ document.getElementById('clientOvl').style.display='none'; }
+function saveClient(){ var name=document.getElementById('ncName').value.trim();
+  if(!name){ toast('Give the client a name.'); return; }
+  var c={ id:uid(), name:name, chas:document.getElementById('ncChas').value,
+    clg:document.getElementById('ncClg').value, deadline:'', folderName:'', lines:newLines() };
+  S.clients.push(c); S.sel=c.id; dirHandle=null; save(); closeClientBox(); render(); }
+function setRen(k,v){ var c=cur(); if(!c) return; c[k]=v; save(); render(); }
+function setDeadline(v){ var c=cur(); if(!c) return; c.deadline=v; save(); }
+function setStatus(i,st){ var c=cur(); if(!c) return; var l=c.lines[i];
+  l.status = (l.status===st?'':st); save(); render(); }
+function setNote(i,v){ var c=cur(); if(!c) return; c.lines[i].note=v; save(); }
+function addLine(){ var c=cur(); if(!c){ toast('Add a client first.'); return; }
+  var name=document.getElementById('addName').value.trim(); if(!name){ toast('Name the line.'); return; }
+  c.lines.push({ id:uid(), name:name, hint:document.getElementById('addHint').value.trim(),
+    status:'', note:'', files:0, last:'', custom:true }); save(); render(); }
+function removeLine(i){ var c=cur(); if(!c) return; var l=c.lines[i];
+  if(!l.custom) return;
+  if(!confirm('Remove "'+l.name+'" from '+c.name+'\u2019s list? Files already in the folder stay where they are.')) return;
+  c.lines.splice(i,1); save(); render(); }
+
+/* drag-drop + attach */
+function dragOver(ev,el){ ev.preventDefault(); el.classList.add('over'); }
+function dropOn(ev,i,el){ ev.preventDefault(); el.classList.remove('over');
+  var fs=ev.dataTransfer&&ev.dataTransfer.files; if(fs&&fs.length) writeFiles(i,fs); }
+var pickIdx=-1;
+function pickFor(i){ pickIdx=i; var inp=document.getElementById('pickFiles'); inp.value=''; inp.click(); }
+document.getElementById('pickFiles').addEventListener('change',function(){
+  if(pickIdx>=0&&this.files.length) writeFiles(pickIdx,this.files); pickIdx=-1; });
+
+/* ── handout ─────────────────────────────────────── */
+function printHandout(){ var c=cur(); if(!c) return;
+  var owed=c.lines.filter(function(l){ return l.status==='a'; });
+  if(!owed.length){ toast('Nothing is marked Client to send.'); return; }
+  if(!c.deadline){ toast('Set the deadline first.'); return; }
+  var badges=[]; if(c.chas)badges.push('CHAS'); if(c.clg)badges.push('Constructionline Gold');
+  var bl=badges.length?badges.join(' and '):'CHAS and Constructionline Gold';
+  var h='<div class="lh"><b>Archer Health and Safety</b><span>Evidence request &middot; '+fmtD(today())+'</span></div>'
+    +'<h3>'+esc(c.name)+' - evidence needed</h3>'
+    +'<p class="dead">Please send the following by <b>'+fmtD(c.deadline)+'</b> so your '+esc(bl)+' evidence stays in date.</p><ol>';
+  owed.forEach(function(l){ h+='<li>'+esc(l.name)+'<span>'+esc(l.note||l.hint)+'</span></li>'; });
+  h+='</ol><div class="sig">Simon Archer &middot; Archer Health and Safety &middot; simon@archerhs.co.uk</div>';
+  document.getElementById('sheet').innerHTML=h;
+  window.print(); }
+
+/* backdrop closes only if the press started on it (house rule) */
+(function(){ var ov=document.getElementById('clientOvl'); var armed=false;
+  ov.addEventListener('mousedown',function(e){ armed=(e.target===ov); });
+  ov.addEventListener('mouseup',function(e){ if(armed&&e.target===ov) closeClientBox(); armed=false; }); })();
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&document.getElementById('clientOvl').style.display!=='none') closeClientBox(); });
+
+render();
+</script>
+</body>
+</html>
