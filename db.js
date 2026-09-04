@@ -1,10 +1,12 @@
 // Single-user state store: one row, the whole app state as JSONB.
 const { Pool } = require('pg');
 
+// Coolify's internal Postgres speaks no SSL; only an external URL that
+// explicitly asks for it (sslmode=require) gets it.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: /localhost|127\.0\.0\.1|@postgres|@casaudit/.test(process.env.DATABASE_URL || '')
-    ? false : { rejectUnauthorized: false },
+  ssl: /sslmode=require/i.test(process.env.DATABASE_URL || '')
+    ? { rejectUnauthorized: false } : false,
 });
 
 async function migrate() {
